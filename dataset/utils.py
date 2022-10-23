@@ -347,6 +347,35 @@ def computeIoU(box1, box2):
     union = box1[2] * box1[3] + box2[2] * box2[3] - inter
     return float(inter) / union
 
+def pascalparts_grounding_eval_bbox(results):
+    correct_val = 0
+    num_val = 0
+
+    for res in tqdm(results):
+
+        target_bbox = res['bbox'] # The dataset annotation is x,y,w,h (top left)
+        W,H = res['image_wh']
+
+        coord = res['pred'].cuda()
+        coord[0::2] *= W
+        coord[1::2] *= H
+
+        coord[0] -= coord[2] / 2
+        coord[1] -= coord[3] / 2
+
+        IoU_det = computeIoU(target_bbox, coord)
+
+        num_val += 1
+        if IoU_det >= 0.5:
+            correct_val += 1
+
+    eval_result = {'pascal_val': correct_val / num_val}
+
+    for metric, acc in eval_result.items():
+        print(f'{metric}: {acc:.3f}')
+
+    return eval_result
+
 
 from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap

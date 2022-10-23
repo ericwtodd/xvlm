@@ -1,10 +1,14 @@
-timm==0.4.9
-transformers==4.12.5
+# timm==0.4.9
+timm
+# transformers==4.12.5
+transformers
 ruamel_yaml
 opencv-python
 scikit-image
 matplotlib
-torch==1.7.1
-torchvision==0.8.2
+# torch==1.7.1
+torch
+# torchvision==0.8.2
+torchvision
 pycocotools
 pycocoevalcap

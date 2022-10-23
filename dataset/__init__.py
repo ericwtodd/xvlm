@@ -9,6 +9,7 @@ from dataset.pretrain_dataset import ImageTextJsonDataset, RegionTextJsonDataset
 from dataset.nlvr_dataset import nlvr_dataset
 from dataset.vqa_dataset import vqa_dataset
 from dataset.grounding_dataset import grounding_dataset, grounding_dataset_bbox
+from dataset.pascalparts_dataset import pascalparts_grounding_dataset_bbox
 from dataset.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_train_scst, coco_karpathy_caption_eval
 
 
@@ -141,6 +142,19 @@ def create_dataset(dataset, config, evaluate=False):
             normalize,
         ])
         train_dataset = grounding_dataset_bbox(config['train_file'], train_transform, config['image_root'], mode='train', config=config)
+        return train_dataset, test_dataset
+    
+    elif dataset == 'pascalparts_grounding_bbox':
+        test_dataset = pascalparts_grounding_dataset_bbox(config['test_file'], test_transform, config['image_root'], mode='test', config=config)
+        if evaluate:
+            return None, test_dataset
+
+        train_transform = transforms.Compose([
+            RandomAugment(2, 7, isPIL=True, augs=['Identity', 'AutoContrast', 'Equalize', 'Brightness', 'Sharpness']),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_dataset = pascalparts_grounding_dataset_bbox(config['train_file'], train_transform, config['image_root'], mode='train', config=config)
         return train_dataset, test_dataset
 
     elif dataset == 'captioning_pretrain':

@@ -2,7 +2,11 @@ from transformers.optimization import AdamW
 
 
 def create_optimizer(args, model):
-    lr = args.lr
+#     lr = args.lr
+    if 'bs' in args.keys():
+        lr = args.lr * args.bs/20 # adjust lr linearly with the current batch size we're using.
+    else:
+        lr = args.lr
     wd = args.weight_decay
     lr_mult = getattr(args, 'lr_mult', 1)
     print("### lr_mult, ", lr_mult)

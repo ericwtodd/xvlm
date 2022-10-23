@@ -3,6 +3,7 @@
 # Copyright (c) 2022, ByteDance Inc.
 # All rights reserved.
 
+from asyncio.proactor_events import _ProactorBaseWritePipeTransport
 import os
 import sys
 import time
@@ -15,8 +16,8 @@ from utils.hdfs_io import HADOOP_BIN, hexists, hmkdir, hcopy
 NNODES = 1  # e.g. 1/2/3/4
 NPROC_PER_NODE = 8  # e.g. 8 gpus
 
-MASTER_ADDR = 'SET_IT'
-MASTER_PORT = 12345
+MASTER_ADDR = '127.0.0.1'
+MASTER_PORT = 9999
 NODE_RANK = 0  # e.g. 0/1/2
 ############
 
@@ -134,6 +135,23 @@ def run_pretrain_refcoco_bbox(args):
     args.config = 'configs/Grounding_bbox.yaml'
     run_refcoco(args, use_bbox=True, load_bbox_pretrain=True)
 
+def run_pretrain_pascalparts_bbox(args):
+    print("### Start pascalparts bbox domain pre-training", flush=True)
+
+    dist_launch = get_dist_launch(args)
+
+    if len(args.load_ckpt_from):
+        print(f"### Loading domain pre-trained results from: {args.load_ckpt_from}")
+        args.checkpoint = get_from_hdfs(args.load_ckpt_from)
+    else: # domain pre-train
+        raise NotImplementedError("Haven't implemented domain pre-training for Pascal Parts dataset")
+        pass
+
+    # Run fine-tune
+    if len(args.output_dir): args.output_dir += '_pascalparts'
+    args.config = 'configs/Grounding_bbox_PascalParts.yaml'
+    run_pascalparts(args, use_bbox=True, load_bbox_pretrain=True)
+
 
 def run_nlvr2(args, load_nlvr_pretrain=False):
     dist_launch = get_dist_launch(args)
@@ -182,6 +200,22 @@ def run_refcoco(args, use_bbox=False, block_num=-1, load_bbox_pretrain=False, ep
                   f"--output_dir {args.output_dir} --bs {args.bs} {f'--output_hdfs {args.output_hdfs}' if len(args.output_hdfs) else ''} "
                   f"--gradcam_mode itm --block_num {block_num} --epochs {epochs} --checkpoint {args.checkpoint} "
                   f"{'--evaluate' if args.evaluate else ''}")
+
+def run_pascalparts(args, use_bbox=True, load_bbox_pretrain=False, epochs=-1):
+    dist_launch = get_dist_launch(args)
+    
+    if use_bbox:
+        print("### Training PascalParts with part bbox", flush=True)
+        os.system(f"{dist_launch}"
+                  f"--use_env Grounding_bbox_PascalParts.py --config {args.config} "
+                  f"--output_dir {args.output_dir} {f'--output_hdfs {args.output_hdfs}' if len(args.output_hdfs) else ''} "
+                  f"--bs {args.bs} {'--load_bbox_pretrain' if load_bbox_pretrain else ''} --checkpoint {args.checkpoint} "
+                  f"{'--evaluate' if args.evaluate else ''}")
+    else:
+        print("### Training PascalParts with part masks", flush=True)
+        raise NotImplementedError("Need to implement training model with segmentations")
+        pass
+
 
 
 def run_pretrain_captioning(args):
@@ -273,6 +307,10 @@ def run(args):
     elif args.task == 'refcoco_bbox':
         assert os.path.exists("images/coco")
         run_pretrain_refcoco_bbox(args)
+    
+    elif args.task == 'pascalparts_bbox':
+        assert os.path.exists("images/pascalparts")
+        run_pretrain_pascalparts_bbox(args)
 
     elif args.task.startswith('coco_capt_domain'):
         domain_ckpt = run_pretrain_captioning(args)
